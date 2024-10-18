@@ -6,9 +6,15 @@ document.addEventListener("DOMContentLoaded", setup);
 
 const deck = {};
 
-var whiteCount = 1;
 
-var blueCount = 1;
+var color_data = [
+    { color: "NoColor", count: 0},
+    { color: "W", count: 0},
+    { color: "U", count: 0},
+    { color: "G", count: 0},
+    { color: "R", count: 0},
+    { color: "B", count: 0}
+];
 
 var data = [
     { cost: "0", count: 0 },
@@ -23,24 +29,21 @@ var data = [
 
 function setup() {
     const mtg = new Mtg();
+    new ColorStats(color_data).buildStats(document.getElementById("colorStats"));
+    new ManaCostStats(data).buildStats(document.getElementById("manaStats"));
     let allCards = [];
     const cardsContainer = document.getElementById('cardsContainer');
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', () => {
+        mtg.loadCards(searchInput.value)
+            .then((cards) => {
 
-    mtg.loadCards()
-        .then((cards) => {
-            allCards = cards;
-            renderCardList(cards);
-
-            new ColorStats(whiteCount,blueCount).buildStats(document.getElementById("colorStats"));
-            new ManaCostStats(data).buildStats(document.getElementById("manaStats"));
-
-            const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', (event) => {
-                const query = event.target.value.toLowerCase();
-                const filteredCards = allCards.filter(card => card.name.toLowerCase().includes(query));
-                renderCardList(filteredCards);
+                renderCardList(cards);
+            })
+            .catch((error) => {
+                console.error('Error loading cards:', error);
             });
-        });
+    });
 }
 
 function renderCardList(cards) {
@@ -114,20 +117,30 @@ function addToDeck(card) {
         alert(`You cannot add more than 4 copies of the card "${card.name}".`);
         return;
     }
-
-    if(card.colors[0][0] == "W")
-        whiteCount++;
-        if(card.colors[0][0] == "U")
-            blueCount++;
+    if (card.colors != null) {
+        card.colors.forEach(color => {
+            let found = color_data.find(c => c.color === color); // Проверка на наличие цвета
+            if (found) {
+                found.count++; // Увеличиваем count
+            } else {
+                color_data.push({ color: color, count: 1 }); // Добавляем новый цвет
+            }
+        });
+    } else
+    {
+        color_data[0].count++;
+    }
+    if (card.cmc != null)
+    {
         if (card.cmc >= 7)
-        {
-            data[7].count++;
-        }
-        else
-        {
-            data[card.cmc].count++;
-        }
-
+            {
+                data[7].count++;
+            }
+            else
+            {
+                data[card.cmc].count++;
+            }
+    }
     if (deck[card.name]) {
         deck[card.name].count += 1; 
     } else {
@@ -138,13 +151,20 @@ function addToDeck(card) {
 function removeFromDeck(cardName) {
     if (deck[cardName]) {
         const card = deck[cardName];
+        if (card.colors != null) {
+            card.colors.forEach(color => {
+                let found = color_data.find(c => c.color === color); // Проверка на наличие цвета
+                if (found) {
+                    found.count--; // Увеличиваем count
+                } else {
+                    //color_data.push({ color: color, count: 1 }); // Добавляем новый цвет
+                }
+            });
+        } else
+        {
+            color_data[0].count--;
+        }
 
-        if (card.colors && card.colors.includes("W")) {
-            whiteCount --; 
-        }
-        if (card.colors && card.colors.includes("U")) {
-            blueCount --; 
-        }
 
         if (card.cmc >= 7) {
             data[7].count --; 
@@ -171,7 +191,7 @@ function updateStats() {
     colorStatsContainer.innerHTML = '';
     manaStatsContainer.innerHTML = '';
 
-    const colorStats = new ColorStats(whiteCount,blueCount);
+    const colorStats = new ColorStats(color_data);
     colorStats.buildStats(colorStatsContainer);
 
     const manaStats = new ManaCostStats(data);

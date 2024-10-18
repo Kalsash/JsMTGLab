@@ -1,24 +1,27 @@
 //import * as d3 from "d3";
+
 class ColorStats {
 
-    constructor(whiteCount, blueCount) {
-        this.whiteCount = whiteCount;
-        this.blueCount = blueCount;
+    constructor(data) {
+        this.data = data;
     }
 
-    buildStats(element){
-        const data = [
-            { color: 'White', count: this.whiteCount },
-            { color: 'Blue', count: this.blueCount }
-        ];
-
+    buildStats(element) {
         const width = 200;
         const height = 200;
         const radius = Math.min(width, height) / 2;
 
+        // Определите соответствие цвета и его названия
         const color = d3.scaleOrdinal()
-            .domain(data.map(d => d.color))
-            .range(['#F0E68C', '#4682B4', '#2F4F4F', '#B22222', '#228B22', '#A9A9A9']);
+            .domain(this.data.map(d => d.color))
+            .range([
+                '#808080',  // Gray
+                '#FAEBD7', // White
+                '#0000FF', // Blue
+                '#228B22', // Green
+                '#B22222', // Red
+                '#000000' // Black
+            ]);
 
         const pie = d3.pie()
             .value(d => d.count)
@@ -27,10 +30,12 @@ class ColorStats {
         const arc = d3.arc()
             .innerRadius(0)
             .outerRadius(radius);
-        const label = document.createElement('label')
+        
+        const label = document.createElement('label');
         label.textContent = "Deck Mana Color Distribution";
         label.classList.add("colorLabel");
-        element.appendChild(label)
+        element.appendChild(label);
+
         const svg = d3.select(element)
             .append("svg")
             .attr("width", width)
@@ -39,7 +44,7 @@ class ColorStats {
             .attr("transform", `translate(${width / 2},${height / 2})`);
 
         const arcs = svg.selectAll("arc")
-            .data(pie(data))
+            .data(pie(this.data))
             .enter()
             .append("g")
             .attr("class", "arc");
@@ -47,8 +52,7 @@ class ColorStats {
         arcs.append("path")
             .attr("d", arc)
             .attr("fill", d => color(d.data.color));
-
     }
-
 }
+
 export { ColorStats };
